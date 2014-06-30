@@ -46,8 +46,8 @@ def transform(input_file, output_file, file_type):
     output_writer.close()
 
 
-# transform('data/train10K.csv', 'data/train10K.vw', 'train')
+transform('data/train10K.csv', 'data/train10K.vw', 'train')
 # transform('data/train100K.csv', 'data/train100K.vw', 'train')
 # transform('data/test10K.csv', 'data/test10K.vw', 'test')
 # transform('data/test100K.csv', 'data/test100K.vw', 'test')
-transform('data/train.csv', 'data/train.vw', 'train')
+# transform('data/train.csv', 'data/train.vw', 'train')
