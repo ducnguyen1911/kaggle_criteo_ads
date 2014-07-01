@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import sys
 
 chunk_size = 100000
 
@@ -24,6 +25,10 @@ def transform(input_file, output_file, file_type):
         for row in chunk.iterrows():
             if file_type == 'train':
                 label = row[1]['Label']
+                if label == 0:
+                    label = -1
+                elif label == 1:
+                    label = 1
 
             row_id = row[1]['Id']
             del row[1]['Id']
@@ -46,8 +51,23 @@ def transform(input_file, output_file, file_type):
     output_writer.close()
 
 
-transform('data/train10K.csv', 'data/train10K.vw', 'train')
+def predict(predictions_file):
+
+    return 0
+
+
+# transform('data/train10K.csv', 'data/train10K.vw', 'train')
 # transform('data/train100K.csv', 'data/train100K.vw', 'train')
 # transform('data/test10K.csv', 'data/test10K.vw', 'test')
 # transform('data/test100K.csv', 'data/test100K.vw', 'test')
 # transform('data/train.csv', 'data/train.vw', 'train')
+
+
+def main():
+    if len(sys.argv) != 4:
+        print "Usage: python <train file> <output file> <file-type>"
+        sys.exit(0)
+
+    transform(sys.argv[1], sys.argv[2], sys.argv[3])
+
+main()
