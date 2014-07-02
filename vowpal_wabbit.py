@@ -73,7 +73,7 @@ def predict(input_predictions_file, output_predictions_file, threshold):
             print 'Reading line:' + str(count*chunk_size)
 
         chunk.columns = ['VW', 'Id']
-        chunk['Predicted'] = sigmoid(chunk['VW'])
+        chunk['Predicted'] = np.round(sigmoid(chunk['VW']),4)
         chunk = chunk.drop('VW', 1)
         chunk = pd.DataFrame(chunk, columns=['Id', 'Predicted'])
         chunk.to_csv(output_predictions_file, sep=',', mode='a', index=False, header=not count)
