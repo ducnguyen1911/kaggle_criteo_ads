@@ -55,7 +55,7 @@ def transform(input_file, output_file, file_type):
     output_writer.close()
 
 
-def predict(input_predictions_file, output_predictions_file, threshold):
+def predict(input_predictions_file, output_predictions_file):
 
     """
     Apply sigmoid function to VW predictions to obtain probability
@@ -89,7 +89,7 @@ def predict(input_predictions_file, output_predictions_file, threshold):
 
 def main():
     if len(sys.argv) == 4:
-        predict(sys.argv[2], sys.argv[3], 0.5)
+        predict(sys.argv[2], sys.argv[3])
     elif len(sys.argv) == 5:
         transform(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
