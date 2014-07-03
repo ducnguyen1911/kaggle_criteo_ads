@@ -1,6 +1,6 @@
 import pandas as pd
 import sys
-
+import gc
 
 def compute_integer_stats(input_file, chunk_size):
     """
@@ -81,6 +81,8 @@ def compute_category_stats(input_file, category_label, chunk_size):
         frame['category'] = stats_category.groupby('category').sum().index
         frame['count'] = stats_category.groupby("category").sum().values
         stats_category = frame
+
+        gc.collect()
 
         count += 1
 
