@@ -2,7 +2,7 @@ import pandas as pd
 
 
 chunk_size = 10000
-input_file = 'data/train10K.csv'
+input_file = 'data/train100K.csv'
 
 
 def compute_stats():
@@ -75,7 +75,6 @@ def compute_stats():
 
     print stats_integer
 
-    print stats_category['C20'].groupby('category').sum()
     return 0
 
 compute_stats()
