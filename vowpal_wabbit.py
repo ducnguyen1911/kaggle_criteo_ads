@@ -93,7 +93,7 @@ def main():
     elif len(sys.argv) == 5:
         transform(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
-        print "Usage: python <action> <input file> <output file> [<file-type>]"
+        print "Usage: python vowpal_wabbit.py <action> <input file> <output file> [<file-type>]"
         print "<file-type> is train or test (for transform only)"
         print "<action> is transform or predict"
         sys.exit(0)
