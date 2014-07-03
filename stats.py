@@ -1,8 +1,8 @@
 import pandas as pd
 
 
-chunk_size = 10000
-input_file = 'data/train100K.csv'
+chunk_size = 1000000
+input_file = 'data/train.csv'
 
 
 def compute_stats():
