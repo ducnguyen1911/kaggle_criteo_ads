@@ -1,8 +1,8 @@
 import pandas as pd
 
 
-chunk_size = 1000000
-input_file = 'data/train.csv'
+chunk_size = 1000
+input_file = 'data/train10K.csv'
 
 
 def compute_stats():
@@ -26,8 +26,7 @@ def compute_stats():
 
     count = 0
     for chunk in reader:
-        if count % 10 == 0:
-            print 'Reading line:' + str(count*chunk_size)
+        print 'Reading line:' + str(count * chunk_size)
 
         chunk_integer = chunk.iloc[:, 2:15]
         chunk_category = chunk.iloc[:, 15:]
@@ -57,6 +56,12 @@ def compute_stats():
             frame['category'] = chunk_category.groupby(category_label).size().index
             frame['count'] = chunk_category.groupby(category_label).size().values
             stats_category[category_label] = pd.concat([stats_category[category_label], frame])
+
+            # Aggregate on common category values
+            frame = pd.DataFrame()
+            frame['category'] = stats_category[category_label].groupby('category').sum().index
+            frame['count'] = stats_category[category_label].groupby("category").sum().values
+            stats_category[category_label] = frame
 
         clicks += chunk['Label'].sum()
 
