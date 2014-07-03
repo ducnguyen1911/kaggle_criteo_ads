@@ -161,8 +161,8 @@ def main():
             # print stats_category
             compute_category_stats_all(input_file, chunk_size)
     else:
-        print "Usage: python stats.py integer <input file> <chunk size>"
-        print "Usage: python stats.py category <input file> <chunk size>"
+        print "Usage {0} <feature-type> <input-file> <chunk-size>".format(sys.argv[0])
+        print "<feature-type> is integer or category"
 
 
 main()
