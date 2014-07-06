@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import sys
 import gc
 
@@ -40,7 +41,7 @@ def compute_integer_stats(input_file, chunk_size):
             stats_integer['sum'] = stats_integer[['sum', 'sum_chunk']].sum(axis=1)
             stats_integer['count'] = stats_integer[['count', 'count_chunk']].sum(axis=1)
 
-            stats_integer = stats_integer.drop(['max_chunk', 'min_chunk', 'sum_chunk', 'count_chunk'], axis=1)
+            stats_integer.drop(['max_chunk', 'min_chunk', 'sum_chunk', 'count_chunk'], axis=1, inplace=True)
 
         clicks += chunk['Label'].sum()
         impressions += chunk.shape[0]
@@ -49,7 +50,28 @@ def compute_integer_stats(input_file, chunk_size):
 
     stats_integer['mean'] = stats_integer['sum'] / stats_integer['count']
 
+    reader = pd.read_csv(input_file, chunksize=chunk_size)
+
+    count = 0
+    for chunk in reader:
+        print 'Reading line:' + str(count * chunk_size)
+
+        chunk_integer = chunk.iloc[:, 2:15]
+
+        if count == 0:
+            stats_integer['sq_sum'] = ((chunk_integer - stats_integer['mean']) ** 2).sum()
+        else:
+            stats_integer['sq_sum_chunk'] = ((chunk_integer - stats_integer['mean']) ** 2).sum()
+            stats_integer['sq_sum'] = stats_integer[['sq_sum', 'sq_sum_chunk']].sum(axis=1)
+            stats_integer.drop(['sq_sum_chunk'], axis=1, inplace=True)
+
+        count += 1
+
+    stats_integer['std'] = (stats_integer['sq_sum'] / (stats_integer['count'] - 1)).apply(np.sqrt)
+    stats_integer.drop(['sq_sum'], axis=1, inplace=True)
+
     print stats_integer
+    stats_integer.to_csv('data/integer_stats.csv')
     print "Total Clicks:" + str(clicks) + " Total Impressions:" + str(impressions)
 
 
@@ -138,6 +160,7 @@ def compute_category_stats_all(input_file, chunk_size):
         stats_category_agg = pd.concat([stats_category_agg, frame])
 
     print stats_category_agg
+    stats_category_agg.to_csv('data/category_stats.csv')
 
 
 def main():
@@ -153,7 +176,7 @@ def main():
             # stats_category = pd.DataFrame()
             # for i in range(1, 27):
             # category_label = 'C' + str(i)
-            #     print "Starting analysis for category: " + category_label
+            # print "Starting analysis for category: " + category_label
             #     frame = compute_category_stats(input_file, category_label, chunk_size).transpose()
             #     frame.reset_index()
             #     frame.index = [category_label]
