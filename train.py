@@ -45,7 +45,7 @@ def transform(input_file, keep_features, stats):
 
     data_feature_integer = [dict(('I' + str(j), u)
                             for j, u in enumerate(item) if str(u) != 'nan')
-                       for item in data_feature_integer]
+                            for item in data_feature_integer]
 
     # Categorical features
     data_feature_category = [dict((u, 1) for u in item if str(u) != 'nan') for item in data_category.values]
@@ -86,8 +86,11 @@ def main():
         y_predict = clf.predict_proba(X_val)
         y_prob = y_predict.max(axis=1)
 
-        print "CV Error: " + sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1))
-        print "CV Log Loss: " + sklearn.metrics.log_loss(y_val.values, y_predict)
+        print "CV Error: " + str(sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1)))
+        print "CV Log Loss: " + str(sklearn.metrics.log_loss(y_val.values, y_predict))
+
+
+        # Predict test data
 
 
 main()
