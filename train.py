@@ -3,6 +3,7 @@ import numpy as np
 import sklearn.feature_extraction
 import sklearn.linear_model
 import sklearn.metrics
+import gc
 
 integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
@@ -75,6 +76,9 @@ def main():
 
         clf.partial_fit(X_train, y_train, classes=all_classes)
 
+        # Force garbage collection
+        gc.collect()
+
     # Load CV data
     for j in cv_file:
         val_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(2))
@@ -82,8 +86,8 @@ def main():
         y_predict = clf.predict_proba(X_val)
         y_prob = y_predict.max(axis=1)
 
-        print sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1))
-        print sklearn.metrics.log_loss(y_val.values, y_predict)
+        print "CV Error: " + sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1))
+        print "CV Log Loss: " + sklearn.metrics.log_loss(y_val.values, y_predict)
 
 
 main()
