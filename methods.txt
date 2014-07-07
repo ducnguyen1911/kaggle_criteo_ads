@@ -1,0 +1,6 @@
+1. L1 regularization to build sparse model - CV search
+2. f^2 and log(1+f) features
+3. Features with values more than 3x std dev set to 3x std dev
+4. L2 regularization - CV search
+5. Zero mean, unit std dev (feature scaling)
+6. Bias feature
