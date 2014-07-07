@@ -9,28 +9,33 @@ integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
 
 train_file_prefix = 'train_split'
-train_file = range(1, 46)
+train_file = range(0, 46)
 cv_file = range(0, 1)
+test_file_name = 'data/test.csv'
 
 integer_features = ['I' + str(i) for i in range(1, 14)]
 category_features = ['C' + str(i) for i in range(1, 27)]
 features = integer_features + category_features
 
 
-def transform(input_file, keep_features, stats):
+def transform(input_file, keep_features, stats, file_type='train'):
     data = pd.read_csv(input_file)
 
-    data_label = data['Label']
     data_id = data['Id']
 
-    data_integer = data.iloc[:, 2:15]
-    data_category = data.iloc[:, 15:]
+    if file_type == 'train':
+        data_integer = data.iloc[:, 2:15]
+        data_category = data.iloc[:, 15:]
+    else:
+        data_integer = data.iloc[:, 1:14]
+        data_category = data.iloc[:, 14:]
 
     # Set minimum value of features to 0
     data_integer['I2'] = data_integer['I2'].apply(lambda x: max(x, 0))
 
     # Mean normalization
-    data_feature_integer = (data_integer.values - stats['integer']['mean'].values) / stats['integer']['std'].values
+    data_feature_integer = (data_integer.values.astype('float') - stats['integer']['mean'].values) / stats['integer'][
+        'std'].values
 
     # Replace NaN with mean value
     # X_train_integer = np.isnan(X_train_integer) * stats['integer']['mean'].values + \
@@ -44,7 +49,7 @@ def transform(input_file, keep_features, stats):
                                       data_feature_integer, np.log(1 + data_feature_integer)])
 
     data_feature_integer = [dict(('I' + str(j), u)
-                            for j, u in enumerate(item) if str(u) != 'nan')
+                                 for j, u in enumerate(item) if str(u) != 'nan')
                             for item in data_feature_integer]
 
     # Categorical features
@@ -57,7 +62,11 @@ def transform(input_file, keep_features, stats):
     fh = sklearn.feature_extraction.FeatureHasher(non_negative=True)
     data_feature = fh.fit_transform(data_feature)
 
-    return data_feature, data_label, data_id
+    if file_type == 'train':
+        data_label = data['Label']
+        return data_feature, data_label, data_id
+    elif file_type == 'test':
+        return data_feature, data_id
 
 
 # Main Code
@@ -90,7 +99,14 @@ def main():
         print "CV Log Loss: " + str(sklearn.metrics.log_loss(y_val.values, y_predict))
 
 
-        # Predict test data
+    # Predict test data
+    X_test, id_test = transform(test_file_name, features, stats, file_type='test')
+    y_test_predict = clf.predict_proba(X_test)
+    y_test_prob = y_test_predict.max(axis=1)
+    y_out = np.vstack([id_test, y_test_prob]).transpose()
+    with open('test_pred.csv', 'wb+') as f:
+        f.write('Id, Predicted\n')
+        np.savetxt(f, y_out, delimiter=",", fmt=['%d', '%.4f'])
 
 
 main()
