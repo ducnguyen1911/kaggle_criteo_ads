@@ -9,9 +9,10 @@ integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
 
 train_file_prefix = 'train_split'
-train_file = range(0, 46)
+train_file = range(0, 10)
 cv_file = range(0, 1)
-test_file_name = 'data/test.csv'
+test_file_prefix = 'test_split'
+test_file = range(10)
 
 integer_features = ['I' + str(i) for i in range(1, 14)]
 category_features = ['C' + str(i) for i in range(1, 27)]
@@ -98,15 +99,21 @@ def main():
         print "CV Error: " + str(sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1)))
         print "CV Log Loss: " + str(sklearn.metrics.log_loss(y_val.values, y_predict))
 
-
     # Predict test data
-    X_test, id_test = transform(test_file_name, features, stats, file_type='test')
-    y_test_predict = clf.predict_proba(X_test)
-    y_test_prob = y_test_predict.max(axis=1)
-    y_out = np.vstack([id_test, y_test_prob]).transpose()
     with open('test_pred.csv', 'wb+') as f:
         f.write('Id, Predicted\n')
-        np.savetxt(f, y_out, delimiter=",", fmt=['%d', '%.4f'])
+        for j in test_file:
+            test_file_name = 'data/{0}{1}.csv'.format(test_file_prefix, str(j).zfill(2))
+            print 'Predicting file' + test_file_name
+
+            X_test, id_test = transform(test_file_name, features, stats, file_type='test')
+            y_test_predict = clf.predict_proba(X_test)
+            y_test_prob = y_test_predict.max(axis=1)
+            y_out = np.vstack([id_test, y_test_prob]).transpose()
+            np.savetxt(f, y_out, delimiter=",", fmt=['%d', '%.4f'])
+
+            # Garbage collection
+            gc.collect()
 
 
 main()
