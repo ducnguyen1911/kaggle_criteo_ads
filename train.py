@@ -5,14 +5,15 @@ import sklearn.linear_model
 import sklearn.metrics
 import gc
 
+
 integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
 
 train_file_prefix = 'train_split'
-train_file = range(0, 46)
+train_file = range(0, 459)
 cv_file = range(0, 1)
 test_file_prefix = 'test_split'
-test_file = range(7)
+test_file = range(61)
 
 integer_features = ['I' + str(i) for i in range(1, 14)]
 category_features = ['C' + str(i) for i in range(1, 27)]
@@ -80,7 +81,7 @@ def main():
     all_classes = np.array([0, 1])
 
     for j in train_file:
-        train_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(2))
+        train_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
         print 'Training file' + train_file_name
         X_train, y_train, id_train = transform(train_file_name, features, stats)
 
@@ -91,7 +92,7 @@ def main():
 
     # Load CV data
     for j in cv_file:
-        val_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(2))
+        val_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
         X_val, y_val, id_val = transform(val_file_name, features, stats)
         y_predict = clf.predict_proba(X_val)
         y_prob = y_predict.max(axis=1)
