@@ -9,10 +9,10 @@ integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
 
 train_file_prefix = 'train_split'
-train_file = range(0, 10)
+train_file = range(0, 46)
 cv_file = range(0, 1)
 test_file_prefix = 'test_split'
-test_file = range(10)
+test_file = range(7)
 
 integer_features = ['I' + str(i) for i in range(1, 14)]
 category_features = ['C' + str(i) for i in range(1, 27)]
