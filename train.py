@@ -4,18 +4,17 @@ import sklearn.feature_extraction
 import sklearn.linear_model
 import sklearn.metrics
 import gc
-import sys
 
 integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
 
 train_file_prefix = 'train_split'
-# train_file = range(0, 459)
-train_file = range(1, 20)
+train_file = range(0, 459)
+# train_file = range(1, 40)
 cv_file = range(0, 1)
 test_file_prefix = 'test_split'
-# test_file = range(61)
-test_file = range(10)
+test_file = range(61)
+# test_file = range(10)
 
 
 def transform(input_file, keep_features, stats, file_type='train'):
@@ -93,17 +92,23 @@ def main():
     all_classes = np.array([0, 1])
 
     integer_features = ['I' + str(i) for i in range(1, 14)]
-    integer_features = [v for v in integer_features
-                        # if v not in ['I3', 'I1', 'I12', 'I2', 'I7', 'I11', 'I4', 'I5', 'I9', 'I13', 'I10']]
-                        if v not in ['I3', 'I1', 'I12', 'I2', 'I7']]
-
     category_features = ['C' + str(i) for i in range(1, 27)]
-    # category_features = [v for v in category_features if v not in ['C5', 'C8']]
-
-    # f = sys.argv[1]
-    # category_features.remove(f)
-    # print category_features
     all_features = integer_features + category_features
+
+    # L1 Feature selection
+    l1_clf = sklearn.linear_model.SGDClassifier(loss='log', penalty='l1')
+    for j in train_file:
+        train_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
+        print 'Training file ' + train_file_name
+
+        X_train, y_train, id_train = transform(train_file_name, all_features, stats)
+        l1_clf.partial_fit(X_train, y_train, classes=all_classes)
+
+        # Force garbage collection
+        gc.collect()
+
+    print "Total features: " + str(l1_clf.coef_.shape[1])
+    print "Features selected:" + str(np.sum(l1_clf.coef_ > 0))
 
 
     # Train all features
@@ -113,6 +118,9 @@ def main():
         print 'Training file ' + train_file_name
         X_train, y_train, id_train = transform(train_file_name, all_features, stats)
 
+        # L1-feature selection
+        X_train = l1_clf.transform(X_train)
+
         clf.partial_fit(X_train, y_train, classes=all_classes)
 
         # Force garbage collection
@@ -121,30 +129,35 @@ def main():
     # Load & cross-validate data
     for j in cv_file:
         val_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
+
         X_val, y_val, id_val = transform(val_file_name, all_features, stats)
+        X_val = l1_clf.transform(X_val)
+
         y_predict = clf.predict_proba(X_val)
 
         print "CV Error: " + str(sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1)))
         print "CV Log Loss: " + str(sklearn.metrics.log_loss(y_val.values, y_predict))
 
-        # Predict test data
-        with open('test_pred.csv', 'wb+') as f:
-            f.write('Id,Predicted\n')
-            for j in test_file:
-                test_file_name = 'data/{0}{1}.csv'.format(test_file_prefix, str(j).zfill(2))
-                print 'Predicting file' + test_file_name
+    # Predict test data
+    with open('test_pred.csv', 'wb+') as f:
+        f.write('Id,Predicted\n')
+        for j in test_file:
+            test_file_name = 'data/{0}{1}.csv'.format(test_file_prefix, str(j).zfill(2))
+            print 'Predicting file' + test_file_name
 
-                X_test, id_test = transform(test_file_name, all_features, stats, file_type='test')
-                y_test_predict = clf.predict_proba(X_test)
+            X_test, id_test = transform(test_file_name, all_features, stats, file_type='test')
+            X_test = l1_clf.transform(X_test)
 
-                # Probability of a click
-                y_test_prob = y_test_predict[:, 1]
-                y_out = np.vstack([id_test, y_test_prob]).transpose()
+            y_test_predict = clf.predict_proba(X_test)
 
-                np.savetxt(f, y_out, delimiter=",", fmt=['%d', '%.4f'])
+            # Probability of a click
+            y_test_prob = y_test_predict[:, 1]
+            y_out = np.vstack([id_test, y_test_prob]).transpose()
 
-                # Garbage collection
-                gc.collect()
+            np.savetxt(f, y_out, delimiter=",", fmt=['%d', '%.4f'])
+
+            # Garbage collection
+            gc.collect()
 
 
 main()
