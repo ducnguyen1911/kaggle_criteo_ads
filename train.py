@@ -9,9 +9,9 @@ integer_stats_file = 'data/integer_stats.csv'
 category_stats_file = 'data/category_stats.csv'
 
 train_file_prefix = 'train_split'
-train_file = range(0, 459)
-# train_file = range(1, 40)
-cv_file = range(0, 1)
+train_file = range(5, 459)
+# train_file = range(5, 40)
+cv_file = range(0, 5)
 test_file_prefix = 'test_split'
 test_file = range(61)
 # test_file = range(10)
@@ -40,30 +40,44 @@ def transform(input_file, keep_features, stats, file_type='train'):
     stats['integer'] = stats['integer'].loc[keep_integer_features, :]
     stats['category'] = stats['category'].loc[keep_category_features, :]
 
-
     # Mean normalization
     data_feature_integer = (data_integer.values.astype('float') - stats['integer']['mean'].values) / stats['integer'][
         'std'].values
 
-    # Replace NaN with mean value
-    # data_feature_integer = np.isnan(data_feature_integer) * stats['integer']['mean'].values + \
-    # (~np.isnan(data_feature_integer)) * data_feature_integer
+    # Replace NaN with mean value (0)
+    # stats_mean = np.tile(stats['integer']['mean'].values, (data_feature_integer.shape[0],1))
+    data_feature_integer = np.where(~np.isnan(data_feature_integer), data_feature_integer, 0)
+
 
     # Truncate large integer values to 5x std. dev
     data_feature_integer = np.minimum(data_feature_integer, 2 * stats['integer']['std'].values)
 
+    # square integer features: f * f & cubic integer features: f * f * f
+    data_integer_square_features = pd.DataFrame(data_feature_integer)
+    data_integer_square_features.columns = keep_integer_features
+    for i in data_integer_square_features.columns:
+        data_integer_square_features[i + i] = data_integer_square_features[i] ** 2
+        sq_mean = np.mean(data_integer_square_features[i + i])
+        sq_std = np.std(data_integer_square_features[i + i])
+        data_integer_square_features[i + i] = (data_integer_square_features[i + i] - sq_mean) / sq_std
+
+        # data_integer_square_features[i + i + i] = data_integer_square_features[i] ** 3
+        # cu_mean = np.mean(data_integer_square_features[i + i + i])
+        # cu_std = np.std(data_integer_square_features[i + i + i])
+        # data_integer_square_features[i + i + i] = (data_integer_square_features[i + i + i] - cu_mean)/cu_std
+
+    data_integer_square_features.drop(keep_integer_features, inplace=True, axis=1)
 
     # log(1+f) integer features
     data_integer_log_features = np.log(1 + data_feature_integer)
 
     # combine features
     data_feature_integer = np.hstack([np.ones((data_feature_integer.shape[0], 1)),
-                                      data_feature_integer, data_integer_log_features])
+                                      data_feature_integer, data_integer_log_features, data_integer_square_features])
 
     data_feature_integer = [dict(('I' + str(j), u)
                                  for j, u in enumerate(item) if str(u) != 'nan')
                             for item in data_feature_integer]
-
 
     # Categorical features
     data_feature_category = [dict((u, 1) for u in item if str(u) != 'nan') for item in data_category.values]
@@ -89,26 +103,33 @@ def main():
     stats['integer'].index = stats['integer'].iloc[:, 0]
     stats['category'].index = stats['category'].iloc[:, 0]
 
+    # Enable L1-feature selection
+    l1_feature_selection = False
+
     all_classes = np.array([0, 1])
 
     integer_features = ['I' + str(i) for i in range(1, 14)]
+    # integer_features = [v for v in integer_features if v not in ['I2', 'I3', 'I5', 'I6', 'I7', 'I9']]
     category_features = ['C' + str(i) for i in range(1, 27)]
+    # category_features = [v for v in category_features if v not in ['C3', 'C4', 'C10', 'C12', 'C16',
+    # 'C21', 'C24', 'C26']]
     all_features = integer_features + category_features
 
     # L1 Feature selection
-    l1_clf = sklearn.linear_model.SGDClassifier(loss='log', penalty='l1')
-    for j in train_file:
-        train_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
-        print 'Training file ' + train_file_name
+    if l1_feature_selection:
+        l1_clf = sklearn.linear_model.SGDClassifier(loss='log', penalty='l1')
+        for j in train_file:
+            train_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
+            print 'Training file ' + train_file_name
 
-        X_train, y_train, id_train = transform(train_file_name, all_features, stats)
-        l1_clf.partial_fit(X_train, y_train, classes=all_classes)
+            X_train, y_train, id_train = transform(train_file_name, all_features, stats)
+            l1_clf.partial_fit(X_train, y_train, classes=all_classes)
 
-        # Force garbage collection
-        gc.collect()
+            # Force garbage collection
+            gc.collect()
 
-    print "Total features: " + str(l1_clf.coef_.shape[1])
-    print "Features selected:" + str(np.sum(l1_clf.coef_ > 0))
+        print "Total features: " + str(l1_clf.coef_.shape[1])
+        print "Features selected:" + str(np.sum(l1_clf.coef_ > 0))
 
 
     # Train all features
@@ -119,7 +140,8 @@ def main():
         X_train, y_train, id_train = transform(train_file_name, all_features, stats)
 
         # L1-feature selection
-        X_train = l1_clf.transform(X_train)
+        if l1_feature_selection:
+            X_train = l1_clf.transform(X_train)
 
         clf.partial_fit(X_train, y_train, classes=all_classes)
 
@@ -127,16 +149,25 @@ def main():
         gc.collect()
 
     # Load & cross-validate data
+    val_predict = np.ones((0, 2))
+    val_label = np.ones((0,))
     for j in cv_file:
         val_file_name = 'data/{0}{1}.csv'.format(train_file_prefix, str(j).zfill(3))
+        print 'CV on file ' + val_file_name
 
         X_val, y_val, id_val = transform(val_file_name, all_features, stats)
-        X_val = l1_clf.transform(X_val)
+        if l1_feature_selection:
+            X_val = l1_clf.transform(X_val)
 
         y_predict = clf.predict_proba(X_val)
 
-        print "CV Error: " + str(sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1)))
-        print "CV Log Loss: " + str(sklearn.metrics.log_loss(y_val.values, y_predict))
+        val_label = np.append(val_label, y_val.values)
+        val_predict = np.concatenate([val_predict, y_predict])
+
+        # print "CV Error: " + str(sklearn.metrics.accuracy_score(y_val.values, y_predict.argmax(axis=1)))
+        # print "CV Log Loss: " + str(sklearn.metrics.log_loss(y_val.values, y_predict))
+
+    print "CV Log Loss: " + str(sklearn.metrics.log_loss(val_label, val_predict))
 
     # Predict test data
     with open('test_pred.csv', 'wb+') as f:
@@ -146,7 +177,9 @@ def main():
             print 'Predicting file' + test_file_name
 
             X_test, id_test = transform(test_file_name, all_features, stats, file_type='test')
-            X_test = l1_clf.transform(X_test)
+
+            if l1_feature_selection:
+                X_test = l1_clf.transform(X_test)
 
             y_test_predict = clf.predict_proba(X_test)
 
